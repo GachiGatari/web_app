@@ -1,17 +1,16 @@
 import datetime
 
-
 from djoser.serializers import UserCreateSerializer, UserSerializer
-from users.models import User, OneTimePassword, UserSession
+from users.models import User, OneTimePassword, UserSession, Permission, Role
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 import os
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.state import token_backend
+
 
 class CustomTokenRefreshSerializer(TokenRefreshSerializer):
     session_id = serializers.CharField(write_only=True)
@@ -24,7 +23,6 @@ class CustomTokenRefreshSerializer(TokenRefreshSerializer):
             raise serializers.ValidationError(
                 "Must have session_id"
             )
-
 
         data = super(CustomTokenRefreshSerializer, self).validate(attrs)
         print("Refresh Data", data)
@@ -41,10 +39,12 @@ class CustomTokenRefreshSerializer(TokenRefreshSerializer):
 
         return data
 
+
 class UserCreateSerializer(UserCreateSerializer):
     class Meta(UserCreateSerializer.Meta):
         model = User
         fields = ('id', 'email', 'name', 'password')
+
 
 class UserVerifySerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -58,7 +58,7 @@ class UserVerifySerializer(serializers.Serializer):
         email, password = attrs.get('email', None), attrs.get('password', None)
         if not email and not password:
             raise serializers.ValidationError(
-                    'Either an email and password must be provided.'
+                'Either an email and password must be provided.'
             )
 
         user = authenticate(email=email, password=password)
@@ -69,6 +69,7 @@ class UserVerifySerializer(serializers.Serializer):
             )
 
         return attrs
+
 
 class UserLoginSerializer(serializers.Serializer):
     otp_code = serializers.CharField()
@@ -120,8 +121,6 @@ class UserLoginSerializer(serializers.Serializer):
             )
         otp.delete()
 
-
-
         return {
             "otp_code": attrs.get("otp_code"),
             "session_id": attrs.get("session_id"),
@@ -129,3 +128,25 @@ class UserLoginSerializer(serializers.Serializer):
             "access_token": str(refresh.access_token),
             "refresh_token": str(refresh)
         }
+
+
+class PermissionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Permission
+        fields = ['id', 'name']
+
+
+class RoleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Role
+        fields = ['id', 'name', 'permissions']
+        extra_kwargs = {'permissions': {'allow_empty': True}}
+
+
+class RolePermissionSerializer(serializers.Serializer):
+    role_id = serializers.IntegerField()
+    permissions_list = serializers.ListField(required=False, default=[])
+
+class UserRoleSerializer(serializers.Serializer):
+    user_id = serializers.IntegerField()
+    roles_list = serializers.ListField(required=False, default=[])

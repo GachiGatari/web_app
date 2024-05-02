@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from django.contrib.auth.models import PermissionsMixin
 
 
+
 # Custom User Manager
 class UserManager(BaseUserManager):
     def create_user(self, email, name, is_admin=False, password=None):
@@ -70,6 +71,14 @@ class User(AbstractBaseUser):
     def has_perm(self, perm, obj=None):
         return self.is_admin
 
+    def custom_has_perm(self, perm, obj=None):
+        print(perm)
+        for role in self.roles.all():
+            for permission in role.permissions.all():
+                if permission.name == perm:
+                    return True
+        return False
+
     def has_module_perms(self, app_label):
         return self.is_admin
 
@@ -90,7 +99,13 @@ class UserSession(models.Model):
 class Permission(models.Model):
     name = models.CharField(max_length=100)
 
+    def __str__(self):
+        return self.name
+
 
 class Role(models.Model):
     name = models.CharField(max_length=100)
     permissions = models.ManyToManyField('Permission')
+
+    def __str__(self):
+        return self.name

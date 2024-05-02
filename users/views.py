@@ -1,17 +1,30 @@
 from rest_framework.views import APIView
 from rest_framework.generics import GenericAPIView
+from rest_framework import mixins, permissions
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.exceptions import ValidationError, NotFound
 # We import our serializer here
-from users.serializers import UserVerifySerializer, UserLoginSerializer, CustomTokenRefreshSerializer
+from users.serializers import (
+    UserVerifySerializer,
+    UserLoginSerializer,
+    CustomTokenRefreshSerializer,
+    PermissionSerializer,
+    RoleSerializer,
+    RolePermissionSerializer,
+    UserRoleSerializer,
+)
+
 from users.utils import send_otp_to_user
-from users.models import UserSession, User
+from users.models import UserSession, User, Permission, Role
 from rest_framework import status
 from rest_framework_simplejwt.views import TokenRefreshView
+from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse
 from rest_framework_simplejwt.tokens import RefreshToken
+
+from users.utils import check_user_permissions
 
 
 
@@ -70,4 +83,136 @@ class AllLogoutAPIView(APIView):
         for session in sessions:
             token = RefreshToken(session.refresh_token)
             token.blacklist()
+        return Response(status=status.HTTP_200_OK)
+
+
+class PermissionDetail(mixins.CreateModelMixin,
+                    mixins.RetrieveModelMixin,
+                    mixins.UpdateModelMixin,
+                    mixins.DestroyModelMixin,
+                    GenericAPIView):
+
+    queryset = Permission.objects.all()
+    serializer_class = PermissionSerializer
+
+    def get(self, request, *args, **kwargs):
+        return self.retrieve(request, *args, **kwargs)
+
+    @check_user_permissions(permission="can_create")
+    def post(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
+
+    @check_user_permissions(permission="can_update")
+    def put(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
+
+    @check_user_permissions(permission="can_delete")
+    def delete(self, request, *args, **kwargs):
+        return self.destroy(request, *args, **kwargs)
+
+
+class RoleDetail(mixins.CreateModelMixin,
+                    mixins.RetrieveModelMixin,
+                    mixins.UpdateModelMixin,
+                    mixins.DestroyModelMixin,
+                    GenericAPIView):
+
+    queryset = Role.objects.all()
+    serializer_class = RoleSerializer
+
+
+    def get(self, request, *args, **kwargs):
+        return self.retrieve(request, *args, **kwargs)
+
+    @check_user_permissions("can_create")
+    def post(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
+
+    @check_user_permissions(permission="can_update")
+    def put(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
+
+    @check_user_permissions(permission="can_delete")
+    def delete(self, request, *args, **kwargs):
+        return self.destroy(request, *args, **kwargs)
+
+class RolePermissionDetail(APIView):
+    serializer_class = RolePermissionSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+    def get(self, request):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        role = get_object_or_404(Role, pk=serializer.data['role_id'])
+        permissions = role.permissions.all()
+        response = serializer.data
+        response["permissions_list"] = PermissionSerializer(instance=permissions, many=True).data
+        return Response(data=response, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        role = get_object_or_404(Role, pk=serializer.data['role_id'])
+        for perm in serializer.data["permissions_list"]:
+            get_object_or_404(Permission, pk=perm)
+        role.permissions.set(serializer.data["permissions_list"])
+        return Response(status=status.HTTP_200_OK)
+
+    def put(self, request):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        role = get_object_or_404(Role, pk=serializer.data['role_id'])
+        permissions = serializer.data["permissions_list"]
+        for perm in permissions:
+            role.permissions.add(get_object_or_404(Permission, pk=perm).pk)
+        return Response(status=status.HTTP_200_OK)
+
+    def delete(self, request):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        role = get_object_or_404(Role, pk=serializer.data['role_id'])
+        permissions = serializer.data["permissions_list"]
+        for perm in permissions:
+            role.permissions.remove(perm)
+        return Response(status=status.HTTP_200_OK)
+
+class UserRoleDetail(APIView):
+    serializer_class = UserRoleSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+    def get(self, request):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = get_object_or_404(User, pk=serializer.data['user_id'])
+        roles = user.roles.all()
+        response = serializer.data
+        response["roles_list"] = RoleSerializer(instance=roles, many=True).data
+        return Response(data=response, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = get_object_or_404(User, pk=serializer.data['user_id'])
+        print(user.name)
+        for role in serializer.data["roles_list"]:
+            get_object_or_404(Role, pk=role)
+        user.roles.set(serializer.data["roles_list"])
+        return Response(status=status.HTTP_200_OK)
+
+    def put(self, request):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = get_object_or_404(User, pk=serializer.data['user_id'])
+        roles = serializer.data["roles_list"]
+        for role in roles:
+            user.roles.add(get_object_or_404(Role, pk=role).pk)
+        return Response(status=status.HTTP_200_OK)
+
+    def delete(self, request):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = get_object_or_404(User, pk=serializer.data['user_id'])
+        roles = serializer.data["roles_list"]
+        for role in roles:
+            user.roles.remove(role)
         return Response(status=status.HTTP_200_OK)
