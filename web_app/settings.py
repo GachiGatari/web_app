@@ -142,7 +142,8 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=float(os.environ.get("ACCESS_TOKEN_LIFETIME"))),
+    # 'ACCESS_TOKEN_LIFETIME': timedelta(minutes=float(os.environ.get("ACCESS_TOKEN_LIFETIME"))),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=50),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'AUTH_HEADER_TYPES': ('JWT',),
     'ROTATE_REFRESH_TOKENS': True,
@@ -176,3 +177,6 @@ SWAGGER_SETTINGS = {
         }
     },
 }
+
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER", "redis://redis:6379/0")
+CELERY_RESULT_BACKEND = os.environ.get("CELERY_BROKER", "redis://redis:6379/0")

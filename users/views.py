@@ -16,7 +16,7 @@ from users.serializers import (
 )
 
 from users.utils import send_otp_to_user
-from users.models import UserSession, User, Permission, Role
+from users.models import UserSession, User, Permission, Role, LogUnit
 from rest_framework import status
 from rest_framework_simplejwt.views import TokenRefreshView
 from django.shortcuts import get_object_or_404
@@ -24,10 +24,10 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from users.utils import check_user_permissions
+from users.utils import check_user_permissions, log_user_action
 
-
-
+from users.tasks import create_task
+from django.http import JsonResponse
 
 
 class CustomTokenRefreshView(TokenRefreshView):
@@ -41,7 +41,6 @@ class UserVerifyAPIView(APIView):
     # Note: we have to specify the following policy to allow
     # anonymous users to call this endpoint
     permission_classes = [AllowAny]
-
 
     def post(self, request, format=None):
         # Pass user-submitted data to the serializer
@@ -95,17 +94,21 @@ class PermissionDetail(mixins.CreateModelMixin,
     queryset = Permission.objects.all()
     serializer_class = PermissionSerializer
 
+    @log_user_action("read_permission")
     def get(self, request, *args, **kwargs):
         return self.retrieve(request, *args, **kwargs)
 
+    @log_user_action("create_permission")
     @check_user_permissions(permission="can_create")
     def post(self, request, *args, **kwargs):
         return self.create(request, *args, **kwargs)
 
+    @log_user_action("update_permission")
     @check_user_permissions(permission="can_update")
     def put(self, request, *args, **kwargs):
         return self.update(request, *args, **kwargs)
 
+    @log_user_action("delete_permission")
     @check_user_permissions(permission="can_delete")
     def delete(self, request, *args, **kwargs):
         return self.destroy(request, *args, **kwargs)
@@ -120,18 +123,21 @@ class RoleDetail(mixins.CreateModelMixin,
     queryset = Role.objects.all()
     serializer_class = RoleSerializer
 
-
+    @log_user_action("read_role")
     def get(self, request, *args, **kwargs):
         return self.retrieve(request, *args, **kwargs)
 
+    @log_user_action("create_role")
     @check_user_permissions("can_create")
     def post(self, request, *args, **kwargs):
         return self.create(request, *args, **kwargs)
 
+    @log_user_action("update_role")
     @check_user_permissions(permission="can_update")
     def put(self, request, *args, **kwargs):
         return self.update(request, *args, **kwargs)
 
+    @log_user_action("delete_role")
     @check_user_permissions(permission="can_delete")
     def delete(self, request, *args, **kwargs):
         return self.destroy(request, *args, **kwargs)
@@ -140,6 +146,7 @@ class RolePermissionDetail(APIView):
     serializer_class = RolePermissionSerializer
     permission_classes = [permissions.IsAdminUser]
 
+    @log_user_action("read_role_permission")
     def get(self, request):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -149,6 +156,7 @@ class RolePermissionDetail(APIView):
         response["permissions_list"] = PermissionSerializer(instance=permissions, many=True).data
         return Response(data=response, status=status.HTTP_200_OK)
 
+    @log_user_action("create_role_permission")
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -158,6 +166,7 @@ class RolePermissionDetail(APIView):
         role.permissions.set(serializer.data["permissions_list"])
         return Response(status=status.HTTP_200_OK)
 
+    @log_user_action("update_role_permission")
     def put(self, request):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -167,6 +176,7 @@ class RolePermissionDetail(APIView):
             role.permissions.add(get_object_or_404(Permission, pk=perm).pk)
         return Response(status=status.HTTP_200_OK)
 
+    @log_user_action("delete_role_permission")
     def delete(self, request):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -180,6 +190,7 @@ class UserRoleDetail(APIView):
     serializer_class = UserRoleSerializer
     permission_classes = [permissions.IsAdminUser]
 
+    @log_user_action("read_user_role")
     def get(self, request):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -189,6 +200,7 @@ class UserRoleDetail(APIView):
         response["roles_list"] = RoleSerializer(instance=roles, many=True).data
         return Response(data=response, status=status.HTTP_200_OK)
 
+    @log_user_action("create_user_role")
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -199,6 +211,7 @@ class UserRoleDetail(APIView):
         user.roles.set(serializer.data["roles_list"])
         return Response(status=status.HTTP_200_OK)
 
+    @log_user_action("update_user_role")
     def put(self, request):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -208,6 +221,7 @@ class UserRoleDetail(APIView):
             user.roles.add(get_object_or_404(Role, pk=role).pk)
         return Response(status=status.HTTP_200_OK)
 
+    @log_user_action("delete_user_role")
     def delete(self, request):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)

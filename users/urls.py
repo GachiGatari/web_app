@@ -14,5 +14,5 @@ urlpatterns = [
     path('permission/<int:pk>', views.PermissionDetail.as_view()),
     path('role/<int:pk>', views.RoleDetail.as_view()),
     path('role_permission/', views.RolePermissionDetail.as_view()),
-    path('user_role/', views.UserRoleDetail.as_view())
+    path('user_role/', views.UserRoleDetail.as_view()),
 ]

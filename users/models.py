@@ -1,3 +1,4 @@
+import django.utils.timezone
 from django.db import models
 from django.contrib.auth.models import BaseUserManager, AbstractBaseUser
 from datetime import datetime, timezone
@@ -109,3 +110,11 @@ class Role(models.Model):
 
     def __str__(self):
         return self.name
+
+class LogUnit(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    method_name = models.CharField(max_length=200)
+    called_at = models.DateTimeField(default=django.utils.timezone.now)
+
+    def __str__(self):
+        return self.user.name + " - " + self.method_name + " - " + str(self.called_at)

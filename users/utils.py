@@ -1,6 +1,6 @@
 import datetime
 import random
-from users.models import OneTimePassword, User
+from users.models import OneTimePassword, User, LogUnit
 from rest_framework.exceptions import PermissionDenied
 
 
@@ -35,6 +35,21 @@ def check_user_permissions(permission):
                 result = function(viewClass, request)
             else:
                 raise PermissionDenied("You have no permission to do this")
+            return result
+
+        return wrapper
+
+    return decorator
+
+def log_user_action(method_name):
+    def decorator(function):
+        def wrapper(viewClass, request, pk=None):
+            print(method_name)
+            result = function(viewClass, request)
+            log = LogUnit.objects.create(
+                user=request.user,
+                method_name=method_name
+            )
             return result
 
         return wrapper

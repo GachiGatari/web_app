@@ -1,5 +1,5 @@
 from django.contrib import admin
-from users.models import User, OneTimePassword, Role, Permission
+from users.models import User, OneTimePassword, Role, Permission, LogUnit
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
 class UserModelAdmin(BaseUserAdmin):
@@ -39,3 +39,4 @@ admin.site.register(User, UserModelAdmin)
 admin.site.register(OneTimePassword)
 admin.site.register(Role)
 admin.site.register(Permission)
+admin.site.register(LogUnit)

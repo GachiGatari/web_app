@@ -12,6 +12,7 @@ from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.state import token_backend
 
 
+
 class CustomTokenRefreshSerializer(TokenRefreshSerializer):
     session_id = serializers.CharField(write_only=True)
 
