@@ -10,7 +10,6 @@ from rest_framework import mixins, permissions
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.exceptions import ValidationError, NotFound
-# We import our serializer here
 from users.serializers import (
     UserVerifySerializer,
     UserLoginSerializer,

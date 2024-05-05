@@ -15,6 +15,10 @@ def create_task(task_type):
 
 @shared_task
 def create_report():
+    """
+    Create report with rating methods by number of they call
+    Report writing to report.txt
+    """
     method_name_count = LogUnit.objects.values('method_name').annotate(count=Count('method_name')).order_by('-count')
     print(method_name_count)
     msg = ""
@@ -26,6 +30,9 @@ def create_report():
 
 @shared_task
 def parse_movie():
+    """
+    Parse Kinostar86 afisha and writing short info about movies in movies.txt
+    """
     url = "https://kinostar86.ru/events?facility=kinostar"
     response = requests.get(url)
     print(response)
