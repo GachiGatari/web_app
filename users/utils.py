@@ -1,5 +1,11 @@
 import datetime
 import random
+import string
+import base64
+import hashlib
+import secrets
+import string
+
 from users.models import OneTimePassword, User, LogUnit
 from rest_framework.exceptions import PermissionDenied
 
@@ -41,6 +47,7 @@ def check_user_permissions(permission):
 
     return decorator
 
+
 def log_user_action(method_name):
     def decorator(function):
         def wrapper(viewClass, request, pk=None):
@@ -55,3 +62,15 @@ def log_user_action(method_name):
         return wrapper
 
     return decorator
+
+
+def generate_code_challenge(code_verifier):
+    code_challenge = hashlib.sha256(code_verifier.encode('utf-8')).digest()
+    code_challenge = base64.urlsafe_b64encode(code_challenge).decode('utf-8').replace('=', '')
+    return code_challenge
+
+
+def generate_random_pass():
+    alphabet = string.ascii_letters + string.digits
+    password = ''.join(secrets.choice(alphabet) for i in range(20))
+    return password

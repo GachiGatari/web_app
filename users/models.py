@@ -51,7 +51,7 @@ class User(AbstractBaseUser):
     updated_at = models.DateTimeField(auto_now=True)
 
     roles = models.ManyToManyField('Role')
-
+    from_oauth = models.BooleanField(default=False)
     objects = UserManager()
 
     USERNAME_FIELD = 'email'

@@ -151,3 +151,4 @@ class RolePermissionSerializer(serializers.Serializer):
 class UserRoleSerializer(serializers.Serializer):
     user_id = serializers.IntegerField()
     roles_list = serializers.ListField(required=False, default=[])
+
